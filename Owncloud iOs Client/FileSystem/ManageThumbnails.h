@@ -21,6 +21,7 @@
 
 - (BOOL) isStoredThumbnailWithHash:(NSUInteger) hash;
 - (BOOL) storeThumbnail:(NSData *)thumbnail withHash:(NSUInteger) hash;
+- (void) downloadThumbnail:(FileDto *)file andUser:(UserDto *)user withHash:(NSUInteger)hash onSuccess:(void(^)())onSuccess;
 - (BOOL) removeStoredThumbnailWithHash:(NSUInteger) hash;
 - (NSString *) getThumbnailPathForFileHash:(NSUInteger) hash;
 - (BOOL) renameStoredThumbnailWithOldHash:(NSUInteger) oldHash withNewHash:(NSUInteger) newHash;

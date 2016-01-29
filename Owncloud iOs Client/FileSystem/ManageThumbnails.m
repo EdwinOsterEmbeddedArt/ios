@@ -18,6 +18,7 @@
 #import "ManageUsersDB.h"
 #import "ManageFilesDB.h"
 #import "UIImage+Thumbnail.h"
+#import "OCCommunication.h"
 
 
 static NSString *thumbnailsCacheFolderName = @"thumbnails_cache";
@@ -51,6 +52,32 @@ static NSString *thumbnailsCacheFolderName = @"thumbnails_cache";
    return [[NSFileManager defaultManager] createFileAtPath:[self getThumbnailPathForFileHash:hash] contents:thumbnail attributes:nil];
     
 }
+
+#pragma mark - Download
+
+- (void) downloadThumbnail:(FileDto *)file andUser:(UserDto *)user withHash:(NSUInteger) hash onSuccess:(void(^)()) onSuccess{
+    
+    [self createThumbnailCacheFolderIfNotExist];
+    
+    NSString *remoteURL = [UtilsUrls getFullRemoteServerFilePathByFile:file andUser:user];
+    NSArray *urlParts = [remoteURL componentsSeparatedByString:@"remote.php/webdav"];
+    remoteURL = [NSString stringWithFormat:@"%@index.php/apps/files/api/v1/thumbnail/128/128%@", urlParts[0], urlParts[1]];
+    NSString *localPath = [NSString stringWithFormat:@"%@%ld%@%@.png", NSTemporaryDirectory(), (long)user.idUser,file.filePath, file.fileName];
+    
+#ifdef CONTAINER_APP
+    
+    [[NSFileManager defaultManager] createDirectoryAtPath:[localPath substringToIndex:localPath.length - file.fileName.length - 4] withIntermediateDirectories:YES attributes:nil error:nil];
+    [[AppDelegate sharedOCCommunication] downloadFileSession:remoteURL toDestiny:localPath defaultPriority:true onCommunication:[AppDelegate sharedOCCommunication] withProgress:nil successRequest:^(NSURLResponse *response, NSURL *filePath) {
+        [self storeThumbnail:UIImagePNGRepresentation([UIImage imageWithContentsOfFile:localPath]) withHash:hash];
+        onSuccess();
+        
+    } failureRequest:^(NSURLResponse *response, NSError *error) {
+        NSLog(@"Error downloading thumbnail: %@", error.localizedDescription);
+        
+    }];
+#endif
+}
+
 
 - (BOOL) isStoredThumbnailWithHash:(NSUInteger) hash {
     

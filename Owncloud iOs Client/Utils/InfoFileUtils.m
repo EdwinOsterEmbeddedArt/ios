@@ -185,37 +185,44 @@
     } else {
         
         fileCell.fileImageView.associatedObject = fileForSetTheStatusIcon.localFolder;
-    
-        if (fileForSetTheStatusIcon.isDownload == downloaded && [FileNameUtils isImageSupportedThisFile:fileForSetTheStatusIcon.fileName]) {
-            
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-                
-                UserDto *user = [ManageUsersDB getActiveUser];
-                
-                UIImage *thumbnail;
-                
-                if ([[ManageThumbnails sharedManager] isStoredThumbnailWithHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID: user.idUser]]){
-                    
-                    thumbnail = [UIImage imageWithContentsOfFile:[[ManageThumbnails sharedManager] getThumbnailPathForFileHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID: user.idUser]]];
+        
+        __block UIImage *thumbnail;
+        
+        if ([[ManageThumbnails sharedManager] isStoredThumbnailWithHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID:user.idUser]]){
 
-                }else{
-                    
+            thumbnail = [UIImage imageWithContentsOfFile:[[ManageThumbnails sharedManager] getThumbnailPathForFileHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID: user.idUser]]];
+            fileCell.fileImageView.image = thumbnail;
+            [fileCell.fileImageView.layer setMasksToBounds:YES];
+            [fileCell setNeedsLayout];
+            
+        }else {
+        
+            if (fileForSetTheStatusIcon.isDownload == downloaded && [FileNameUtils isImageSupportedThisFile:fileForSetTheStatusIcon.fileName]) {
+                
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+                        
                     thumbnail = [[UIImage imageWithContentsOfFile: fileForSetTheStatusIcon.localFolder] getThumbnail];
                     [[ManageThumbnails sharedManager] storeThumbnail:UIImagePNGRepresentation(thumbnail) withHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID:user.idUser]];
                     
-                }
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        fileCell.fileImageView.image = thumbnail;
+                        [fileCell.fileImageView.layer setMasksToBounds:YES];
+                        [fileCell setNeedsLayout];
+                    });
+                   
+                });
                 
-                dispatch_async(dispatch_get_main_queue(), ^{
+            }else{
+                UserDto *user = [ManageUsersDB getActiveUser];
+                NSString *imageFile = [FileNameUtils getTheNameOfTheImagePreviewOfFileName:[fileForSetTheStatusIcon.fileName stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                fileCell.fileImageView.image = [UIImage imageNamed:imageFile];
+                [[ManageThumbnails sharedManager] downloadThumbnail:fileForSetTheStatusIcon andUser:user withHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID:user.idUser] onSuccess:^(){
+                    thumbnail = [UIImage imageWithContentsOfFile:[[ManageThumbnails sharedManager] getThumbnailPathForFileHash:[fileForSetTheStatusIcon getHashIdentifierOfUserID:user.idUser]]];
                     fileCell.fileImageView.image = thumbnail;
                     [fileCell.fileImageView.layer setMasksToBounds:YES];
                     [fileCell setNeedsLayout];
-                });
-               
-            });
-            
-        }else{
-            NSString *imageFile = [FileNameUtils getTheNameOfTheImagePreviewOfFileName:[fileForSetTheStatusIcon.fileName stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
-            fileCell.fileImageView.image = [UIImage imageNamed:imageFile];
+                }];
+            }
         }
         
 
